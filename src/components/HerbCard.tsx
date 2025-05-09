@@ -29,6 +29,11 @@ const HerbCard: React.FC<HerbCardProps> = ({ herb }) => {
             src={primaryImage.url || '/placeholder.svg'} 
             alt={primaryImage.alt || herb.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder.svg';
+              target.onerror = null; // Prevent infinite loop
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">

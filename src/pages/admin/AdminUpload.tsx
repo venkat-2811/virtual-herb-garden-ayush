@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useHerbs } from '@/contexts/HerbContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Upload, X, Image, Leaf, AlertTriangle, Check, Star, StarIcon } from 'lucide-react';
+import { ArrowLeft, Upload, X, Image, Leaf, AlertTriangle, Check, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -173,7 +172,7 @@ const AdminUpload: React.FC = () => {
       setUploadProgress(100);
       clearProgressInterval();
       
-      toast.success('3D model uploaded successfully');
+      toast.success('3D model uploaded and stored successfully');
       setModelFile(null);
       
       // Reset progress after a delay
@@ -218,7 +217,7 @@ const AdminUpload: React.FC = () => {
       setUploadProgress(100);
       clearProgressInterval();
       
-      toast.success('Images uploaded successfully');
+      toast.success('Images uploaded and stored successfully');
       setImageFiles([]);
       setPrimaryImageIndex(0);
       

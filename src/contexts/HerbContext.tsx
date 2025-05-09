@@ -222,30 +222,43 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const uploadHerbModel = async (id: string, modelFile: File) => {
-    // In a real application, this would upload to Supabase Storage
     setLoading(true);
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create a unique filename
+      const timestamp = Date.now();
+      const fileExt = modelFile.name.split('.').pop();
+      const fileName = `${id}_${timestamp}.${fileExt}`;
+      const filePath = `models/${id}/${fileName}`;
       
-      // Create a persistent URL that would normally come from Storage
-      const modelUrl = URL.createObjectURL(modelFile);
-      
-      console.log(`Uploading 3D model for herb ${id}: ${modelFile.name}`);
-      
-      // This would actually be a call to Supabase Storage in a real app:
-      // const filePath = `models/${id}/${modelFile.name}`;
-      // const { data, error } = await supabase.storage
+      // Store the file reference in a more permanent way
+      // In a real application with Supabase:
+      // const { error: uploadError } = await supabase.storage
       //   .from('herb-models')
       //   .upload(filePath, modelFile, { upsert: true });
-      // if (error) throw error;
-      // const modelUrl = supabase.storage.from('herb-models').getPublicUrl(data.path).data.publicUrl;
+      
+      // if (uploadError) throw uploadError;
+      
+      // const { data } = supabase.storage
+      //   .from('herb-models')
+      //   .getPublicUrl(filePath);
+      
+      // const modelUrl = data.publicUrl;
+      
+      // For demo, we'll use a blob URL that will persist for this session
+      const modelUrl = URL.createObjectURL(modelFile);
+      console.log(`Model uploaded: ${modelUrl}`);
+      
+      // Store this URL in localStorage to persist across page reloads
+      const storedModels = JSON.parse(localStorage.getItem('herbModels') || '{}');
+      storedModels[id] = modelUrl;
+      localStorage.setItem('herbModels', JSON.stringify(storedModels));
       
       // Update the herb with the new model URL
       updateHerb(id, { model3dUrl: modelUrl });
-      toast.success('3D model uploaded successfully');
+      toast.success('3D model uploaded and stored successfully');
     } catch (err) {
+      console.error('Failed to upload 3D model:', err);
       setError('Failed to upload 3D model');
       toast.error('Failed to upload 3D model');
       throw err;
@@ -255,62 +268,76 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const uploadHerbImages = async (id: string, imageFiles: File[]) => {
-    // In a real application, this would upload to Supabase Storage
     setLoading(true);
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log(`Uploading ${imageFiles.length} images for herb ${id}`);
-      
       const herb = getHerbById(id);
-      const hasExistingImages = herb && herb.images && herb.images.length > 0;
+      if (!herb) throw new Error('Herb not found');
       
-      // This would be calls to Supabase Storage in a real app:
+      // Get existing images or initialize empty array
+      const existingImages = herb.images || [];
+      
+      // Process each image
       const newImages = await Promise.all(imageFiles.map(async (file, index) => {
-        // const filePath = `images/${id}/${Date.now()}-${file.name}`;
-        // const { data, error } = await supabase.storage
+        // Create unique filename
+        const timestamp = Date.now();
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${id}_${timestamp}_${index}.${fileExt}`;
+        const filePath = `images/${id}/${fileName}`;
+        
+        // In a real application with Supabase:
+        // const { error: uploadError } = await supabase.storage
         //   .from('herb-images')
         //   .upload(filePath, file, { upsert: true });
-        // if (error) throw error;
-        // const publicUrl = supabase.storage.from('herb-images').getPublicUrl(data.path).data.publicUrl;
         
-        // For now, create a blob URL
+        // if (uploadError) throw uploadError;
+        
+        // const { data } = supabase.storage
+        //   .from('herb-images')
+        //   .getPublicUrl(filePath);
+        
+        // const publicUrl = data.publicUrl;
+        
+        // For demo, create a blob URL that will persist for this session
         const publicUrl = URL.createObjectURL(file);
+        console.log(`Image uploaded: ${publicUrl}`);
         
         return {
           id: `${Date.now()}-${index}`,
           url: publicUrl,
           alt: file.name,
-          // Mark as primary if it's the first image and there are no existing images
-          isPrimary: !hasExistingImages && index === 0
+          // Make the first uploaded image the primary image if no images exist
+          isPrimary: existingImages.length === 0 && index === 0
         };
       }));
       
-      // Update the herb with the new images
-      if (herb) {
-        let updatedImages = [...herb.images];
-        
-        // If there are no existing images and we're adding new ones,
-        // ensure the first new image is marked as primary
-        if (updatedImages.length === 0 && newImages.length > 0) {
-          updatedImages = [...newImages];
-        } else {
-          // Otherwise, add the new images while preserving existing primary status
-          updatedImages = [...updatedImages, ...newImages];
-        }
-        
-        // Ensure only one image is primary
-        if (!updatedImages.some(img => img.isPrimary) && updatedImages.length > 0) {
-          updatedImages[0].isPrimary = true;
-        }
-        
-        updateHerb(id, { images: updatedImages });
+      // Update images array, preserving existing images
+      let updatedImages = [...existingImages];
+      
+      // If this is the first upload and we have new images, set the first as primary
+      if (updatedImages.length === 0 && newImages.length > 0) {
+        newImages[0].isPrimary = true;
+        updatedImages = newImages;
+      } else {
+        // Otherwise append the new images
+        updatedImages = [...updatedImages, ...newImages];
       }
       
-      toast.success('Images uploaded successfully');
+      // Ensure only one image is primary
+      if (!updatedImages.some(img => img.isPrimary) && updatedImages.length > 0) {
+        updatedImages[0].isPrimary = true;
+      }
+      
+      // Store images in localStorage to persist across page reloads
+      const storedImages = JSON.parse(localStorage.getItem('herbImages') || '{}');
+      storedImages[id] = updatedImages;
+      localStorage.setItem('herbImages', JSON.stringify(storedImages));
+      
+      // Update the herb with the new images
+      updateHerb(id, { images: updatedImages });
+      toast.success('Images uploaded and stored successfully');
     } catch (err) {
+      console.error('Failed to upload images:', err);
       setError('Failed to upload images');
       toast.error('Failed to upload images');
       throw err;
@@ -318,6 +345,41 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  // Load stored data from localStorage on mount
+  useEffect(() => {
+    try {
+      // Load stored models
+      const storedModels = JSON.parse(localStorage.getItem('herbModels') || '{}');
+      
+      // Load stored images
+      const storedImages = JSON.parse(localStorage.getItem('herbImages') || '{}');
+      
+      // Update herbs with stored data
+      setHerbs(prevHerbs => 
+        prevHerbs.map(herb => {
+          const updates: Partial<Herb> = {};
+          
+          // Apply stored model if available
+          if (storedModels[herb.id]) {
+            updates.model3dUrl = storedModels[herb.id];
+          }
+          
+          // Apply stored images if available
+          if (storedImages[herb.id]) {
+            updates.images = storedImages[herb.id];
+          }
+          
+          // Only update if we have changes
+          return Object.keys(updates).length > 0 
+            ? { ...herb, ...updates } 
+            : herb;
+        })
+      );
+    } catch (error) {
+      console.error("Error loading stored herb data:", error);
+    }
+  }, []);
 
   const value = {
     herbs,

@@ -65,31 +65,55 @@ const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [modelLoaded, setModelLoaded] = useState<boolean>(false);
+  const [progressValue, setProgressValue] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load the 3D model with proper status updates
+    setLoading(true);
+    setError(null);
+    
     const timer = setTimeout(() => {
       if (!modelUrl) {
         setError("No 3D model available for this herb");
-      } else {
-        // Check if the URL is valid before attempting to load
-        fetch(modelUrl)
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Failed to load 3D model: ${response.statusText}`);
-            }
-            setModelLoaded(true);
-          })
-          .catch(err => {
-            console.error("Error loading 3D model:", err);
-            setError(`Could not load 3D model: ${err.message}`);
-          });
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    }, 1000);
+      
+      // Start progress animation
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 5;
+        setProgressValue(Math.min(progress, 90)); // Only go up to 90% until actual load completes
+        
+        if (progress >= 90) {
+          clearInterval(progressInterval);
+        }
+      }, 100);
+      
+      // Check if the URL is valid before attempting to load
+      fetch(modelUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to load 3D model: ${response.statusText}`);
+          }
+          setModelLoaded(true);
+          setProgressValue(100);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Error loading 3D model:", err);
+          setError(`Could not load 3D model: ${err.message}`);
+          setLoading(false);
+        })
+        .finally(() => {
+          clearInterval(progressInterval);
+        });
+    }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [modelUrl]);
 
   if (loading) {
@@ -99,7 +123,7 @@ const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
           <Leaf className="h-12 w-12 text-herb-secondary animate-spin" />
           <p className="mt-4 text-sm text-gray-500">Loading 3D model...</p>
           <div className="w-48 mt-4">
-            <Progress value={45} className="h-2" />
+            <Progress value={progressValue} className="h-2" />
           </div>
         </div>
       </div>

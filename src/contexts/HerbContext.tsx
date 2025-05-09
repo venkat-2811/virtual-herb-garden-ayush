@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Herb, SearchFilters } from '@/types';
 import { toast } from 'sonner';
@@ -265,6 +264,9 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log(`Uploading ${imageFiles.length} images for herb ${id}`);
       
+      const herb = getHerbById(id);
+      const hasExistingImages = herb && herb.images && herb.images.length > 0;
+      
       // This would be calls to Supabase Storage in a real app:
       const newImages = await Promise.all(imageFiles.map(async (file, index) => {
         // const filePath = `images/${id}/${Date.now()}-${file.name}`;
@@ -281,14 +283,29 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: `${Date.now()}-${index}`,
           url: publicUrl,
           alt: file.name,
-          isPrimary: index === 0
+          // Mark as primary if it's the first image and there are no existing images
+          isPrimary: !hasExistingImages && index === 0
         };
       }));
       
       // Update the herb with the new images
-      const herb = getHerbById(id);
       if (herb) {
-        const updatedImages = [...herb.images, ...newImages];
+        let updatedImages = [...herb.images];
+        
+        // If there are no existing images and we're adding new ones,
+        // ensure the first new image is marked as primary
+        if (updatedImages.length === 0 && newImages.length > 0) {
+          updatedImages = [...newImages];
+        } else {
+          // Otherwise, add the new images while preserving existing primary status
+          updatedImages = [...updatedImages, ...newImages];
+        }
+        
+        // Ensure only one image is primary
+        if (!updatedImages.some(img => img.isPrimary) && updatedImages.length > 0) {
+          updatedImages[0].isPrimary = true;
+        }
+        
         updateHerb(id, { images: updatedImages });
       }
       

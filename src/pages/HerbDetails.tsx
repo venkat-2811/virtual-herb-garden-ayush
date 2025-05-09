@@ -23,7 +23,8 @@ import {
   MapPin, 
   Bookmark, 
   ClipboardList, 
-  FlaskConical
+  FlaskConical,
+  Upload
 } from 'lucide-react';
 
 const HerbDetails: React.FC = () => {
@@ -72,8 +73,9 @@ const HerbDetails: React.FC = () => {
   }
   
   // Find the primary image or use the first one
-  const images = herb.images;
-  const activeImage = images[activeImageIndex];
+  const images = herb.images || [];
+  const primaryImage = images.find(img => img.isPrimary) || images[0];
+  const activeImage = images[activeImageIndex] || primaryImage;
   
   return (
     <div className="container py-8">
@@ -88,11 +90,18 @@ const HerbDetails: React.FC = () => {
         </div>
         
         {isAdmin && (
-          <Button asChild>
-            <Link to={`/admin/herbs/${herb.id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" /> Edit Herb
-            </Link>
-          </Button>
+          <div className="flex gap-3 mt-4 md:mt-0">
+            <Button asChild variant="outline">
+              <Link to={`/admin/herbs/${herb.id}/upload`}>
+                <Upload className="mr-2 h-4 w-4" /> Upload Files
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to={`/admin/herbs/${herb.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" /> Edit Herb
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
       
@@ -100,20 +109,26 @@ const HerbDetails: React.FC = () => {
         {/* Left column: Images and 3D model */}
         <div>
           <div className="mb-6">
-            <div className="aspect-square overflow-hidden rounded-lg border">
-              <img 
-                src={activeImage?.url || '/placeholder.svg'} 
-                alt={activeImage?.alt || herb.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {activeImage ? (
+              <div className="aspect-square overflow-hidden rounded-lg border">
+                <img 
+                  src={activeImage.url || '/placeholder.svg'} 
+                  alt={activeImage.alt || herb.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="aspect-square overflow-hidden rounded-lg border bg-gray-100 flex items-center justify-center">
+                <Leaf className="h-16 w-16 text-gray-300" />
+              </div>
+            )}
             
             {images.length > 1 && (
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-4 overflow-auto pb-2">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
-                    className={`w-16 h-16 rounded-md overflow-hidden border-2 ${
+                    className={`w-16 h-16 rounded-md overflow-hidden border-2 flex-shrink-0 ${
                       index === activeImageIndex 
                         ? 'border-herb-primary' 
                         : 'border-transparent'
@@ -122,7 +137,7 @@ const HerbDetails: React.FC = () => {
                   >
                     <img 
                       src={image.url} 
-                      alt={image.alt}
+                      alt={image.alt || `${herb.name} image ${index+1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -151,7 +166,7 @@ const HerbDetails: React.FC = () => {
                 <div>
                   <h2 className="text-xl font-semibold mb-2">Description</h2>
                   <p className="text-gray-700 leading-relaxed">
-                    {herb.description}
+                    {herb.description || 'No description available.'}
                   </p>
                 </div>
                 
@@ -163,11 +178,13 @@ const HerbDetails: React.FC = () => {
                     <h2 className="text-xl font-semibold">Native Regions</h2>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {herb.region.map(region => (
+                    {herb.region && herb.region.length > 0 ? herb.region.map(region => (
                       <Badge key={region} variant="outline">
                         {region}
                       </Badge>
-                    ))}
+                    )) : (
+                      <p className="text-muted-foreground text-sm">No regions specified</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -181,16 +198,20 @@ const HerbDetails: React.FC = () => {
                     <h2 className="text-xl font-semibold">Medicinal Uses</h2>
                   </div>
                   
-                  <ul className="space-y-3">
-                    {herb.uses.map((use, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-herb-primary/10 text-herb-primary text-sm mr-2">
-                          {index + 1}
-                        </span>
-                        <span className="text-gray-700">{use}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {herb.uses && herb.uses.length > 0 ? (
+                    <ul className="space-y-3">
+                      {herb.uses.map((use, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-herb-primary/10 text-herb-primary text-sm mr-2">
+                            {index + 1}
+                          </span>
+                          <span className="text-gray-700">{use}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No uses specified</p>
+                  )}
                 </div>
                 
                 <Card>
@@ -218,16 +239,20 @@ const HerbDetails: React.FC = () => {
                     <h2 className="text-xl font-semibold">Chemical Composition</h2>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {herb.composition.map((component, index) => (
-                      <div key={index} className="bg-muted/50 p-4 rounded-lg">
-                        <p className="font-medium">{component}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Active component
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  {herb.composition && herb.composition.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {herb.composition.map((component, index) => (
+                        <div key={index} className="bg-muted/50 p-4 rounded-lg">
+                          <p className="font-medium">{component}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Active component
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No composition data available</p>
+                  )}
                 </div>
                 
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">

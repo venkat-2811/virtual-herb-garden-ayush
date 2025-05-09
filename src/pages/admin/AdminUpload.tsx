@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useHerbs } from '@/contexts/HerbContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Upload, X, Image, Leaf, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, X, Image, Leaf, AlertTriangle, Check, Star, StarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,7 +27,9 @@ const AdminUpload: React.FC = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<{model?: string, images?: string}>({});
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
   
+  // If herb doesn't exist, show error message
   if (!herb) {
     return (
       <div className="container py-8">
@@ -112,9 +114,24 @@ const AdminUpload: React.FC = () => {
     setImageFiles(prev => {
       const newFiles = [...prev];
       newFiles.splice(index, 1);
+      
+      // If removing the primary image, set the first one as primary
+      if (index === primaryImageIndex) {
+        setPrimaryImageIndex(0);
+      } 
+      // If removing an image before the primary, adjust the primary index
+      else if (index < primaryImageIndex) {
+        setPrimaryImageIndex(primaryImageIndex - 1);
+      }
+      
       validateImageFiles(newFiles);
       return newFiles;
     });
+  };
+  
+  const setPrimaryImage = (index: number) => {
+    setPrimaryImageIndex(index);
+    toast.info(`Image "${imageFiles[index].name}" set as primary`);
   };
   
   const simulateProgress = () => {
@@ -187,7 +204,15 @@ const AdminUpload: React.FC = () => {
       // Start progress simulation
       const clearProgressInterval = simulateProgress();
       
-      await uploadHerbImages(herb.id, imageFiles);
+      // Rearrange the files array so that the primary image comes first
+      const orderedFiles = [...imageFiles];
+      if (primaryImageIndex !== 0 && primaryImageIndex < orderedFiles.length) {
+        const primaryFile = orderedFiles[primaryImageIndex];
+        orderedFiles.splice(primaryImageIndex, 1);
+        orderedFiles.unshift(primaryFile);
+      }
+      
+      await uploadHerbImages(herb.id, orderedFiles);
       
       // Ensure progress reaches 100%
       setUploadProgress(100);
@@ -195,6 +220,7 @@ const AdminUpload: React.FC = () => {
       
       toast.success('Images uploaded successfully');
       setImageFiles([]);
+      setPrimaryImageIndex(0);
       
       // Reset progress after a delay
       setTimeout(() => setUploadProgress(0), 1000);
@@ -321,7 +347,8 @@ const AdminUpload: React.FC = () => {
         <div className="p-6 bg-white rounded-lg border">
           <h2 className="text-xl font-semibold mb-4">Upload Images</h2>
           <p className="text-gray-600 mb-4">
-            Upload high-quality images (JPG, JPEG, PNG) of the herb (max size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB per image). These will be displayed in the herb details page.
+            Upload high-quality images (JPG, JPEG, PNG) of the herb (max size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB per image). 
+            The first image or the one marked as primary will be used as the main image.
           </p>
           
           <div className="space-y-4">
@@ -347,30 +374,54 @@ const AdminUpload: React.FC = () => {
             
             {imageFiles.length > 0 && (
               <div className="space-y-2">
-                <Label>Selected Images ({imageFiles.length})</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex justify-between items-center">
+                  <Label>Selected Images ({imageFiles.length})</Label>
+                  <p className="text-xs text-blue-600">
+                    Click the star icon to set an image as primary
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {imageFiles.map((file, index) => (
                     <div 
                       key={index} 
-                      className="p-2 border rounded-md bg-muted/20 flex justify-between items-center"
+                      className={`p-3 border rounded-md ${index === primaryImageIndex ? 'bg-blue-50 border-blue-200' : 'bg-muted/20'} 
+                      flex flex-col gap-2`}
                     >
-                      <div className="flex items-center space-x-2 truncate">
-                        <Image className="h-5 w-5 text-herb-primary shrink-0" />
-                        <span className="font-medium truncate">{file.name}</span>
-                        <span className="text-xs text-gray-500 shrink-0">
-                          ({formatFileSize(file.size)})
-                        </span>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center space-x-2 truncate">
+                          <Image className="h-5 w-5 text-herb-primary shrink-0" />
+                          <span className="font-medium truncate max-w-[120px]">{file.name}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={index === primaryImageIndex ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-500'}
+                            onClick={() => setPrimaryImage(index)}
+                            disabled={uploadingImages}
+                            title="Set as primary image"
+                          >
+                            <Star className="h-4 w-4" fill={index === primaryImageIndex ? 'currentColor' : 'none'} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeImage(index)}
+                            disabled={uploadingImages}
+                            title="Remove image"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeImage(index)}
-                        className="shrink-0"
-                        disabled={uploadingImages}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="text-xs text-gray-500 flex justify-between items-center">
+                        <span>{formatFileSize(file.size)}</span>
+                        {index === primaryImageIndex && (
+                          <span className="text-blue-600 font-medium">Primary</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -406,11 +457,25 @@ const AdminUpload: React.FC = () => {
                 )}
               </Button>
             </div>
+
+            {herb.images && herb.images.length > 0 && (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-green-800 flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-green-600" />
+                  This herb already has {herb.images.length} image(s). New uploads will be added to the collection.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         </div>
       </div>
       
-      <div className="mt-8">
+      <div className="mt-8 flex gap-4">
+        <Button asChild variant="outline">
+          <Link to="/admin/herbs">
+            Back to Herbs List
+          </Link>
+        </Button>
         <Button asChild>
           <Link to={`/herbs/${herb.id}`}>
             View Herb Page
@@ -430,21 +495,5 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => 
     />
   );
 };
-
-// Check icon component
-const Check = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
 
 export default AdminUpload;

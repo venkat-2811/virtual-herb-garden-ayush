@@ -1,7 +1,7 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import { Leaf } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -9,6 +9,20 @@ interface HerbViewer3DProps {
   modelUrl?: string;
   herbName: string;
 }
+
+// Model component that loads the GLB file
+const Model = ({ url }: { url: string }) => {
+  const { scene } = useGLTF(url);
+  
+  useEffect(() => {
+    // Clean up resources when unmounting
+    return () => {
+      useGLTF.preload(url);
+    };
+  }, [url]);
+  
+  return <primitive object={scene} scale={1.5} position={[0, -0.5, 0]} />;
+};
 
 // Basic leaf component for fallback
 const SimpleLeaf = () => {
@@ -20,6 +34,16 @@ const SimpleLeaf = () => {
         <cylinderGeometry args={[0.05, 0.05, 1.5, 8]} />
         <meshStandardMaterial emissive="#8cb369" />
       </mesh>
+    </mesh>
+  );
+};
+
+// Fallback component to show during loading
+const LoadingFallback = () => {
+  return (
+    <mesh>
+      <sphereGeometry args={[0.2, 8, 8]} />
+      <meshStandardMaterial emissive="#cccccc" wireframe />
     </mesh>
   );
 };
@@ -36,7 +60,7 @@ const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
         setError("No 3D model available for this herb");
       }
       setLoading(false);
-    }, 2000);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [modelUrl]);
@@ -83,10 +107,9 @@ const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
         <pointLight position={[-10, -10, -10]} />
         
         {modelUrl ? (
-          <mesh>
-            {/* In a real implementation, we would load the GLB model here */}
-            <SimpleLeaf />
-          </mesh>
+          <Suspense fallback={<LoadingFallback />}>
+            <Model url={modelUrl} />
+          </Suspense>
         ) : (
           <SimpleLeaf />
         )}

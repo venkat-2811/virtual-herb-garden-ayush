@@ -5,8 +5,14 @@ import { useHerbs } from '@/contexts/HerbContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Upload, X, Image, Leaf } from 'lucide-react';
+import { ArrowLeft, Upload, X, Image, Leaf, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// Maximum allowed file sizes in bytes
+const MAX_MODEL_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const AdminUpload: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +25,8 @@ const AdminUpload: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadingModel, setUploadingModel] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<{model?: string, images?: string}>({});
   
   if (!herb) {
     return (
@@ -32,16 +40,71 @@ const AdminUpload: React.FC = () => {
     );
   }
   
+  const validateModelFile = (file: File | null): boolean => {
+    if (!file) {
+      setValidationErrors(prev => ({ ...prev, model: undefined }));
+      return false;
+    }
+    
+    // Check file extension
+    const isGlb = file.name.toLowerCase().endsWith('.glb');
+    if (!isGlb) {
+      setValidationErrors(prev => ({ ...prev, model: 'Only .glb files are allowed' }));
+      return false;
+    }
+    
+    // Check file size
+    if (file.size > MAX_MODEL_SIZE) {
+      setValidationErrors(prev => ({ ...prev, model: `File size exceeds maximum allowed (${MAX_MODEL_SIZE / (1024 * 1024)}MB)` }));
+      return false;
+    }
+    
+    setValidationErrors(prev => ({ ...prev, model: undefined }));
+    return true;
+  };
+  
+  const validateImageFiles = (files: File[]): boolean => {
+    if (files.length === 0) {
+      setValidationErrors(prev => ({ ...prev, images: undefined }));
+      return false;
+    }
+    
+    // Check if all files are images
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const areAllImages = files.every(file => validImageTypes.includes(file.type));
+    
+    if (!areAllImages) {
+      setValidationErrors(prev => ({ ...prev, images: 'Only JPG, JPEG, and PNG files are allowed' }));
+      return false;
+    }
+    
+    // Check if any file exceeds the max size
+    const anyFileTooLarge = files.some(file => file.size > MAX_IMAGE_SIZE);
+    if (anyFileTooLarge) {
+      setValidationErrors(prev => ({ ...prev, images: `One or more files exceed maximum allowed size (${MAX_IMAGE_SIZE / (1024 * 1024)}MB)` }));
+      return false;
+    }
+    
+    setValidationErrors(prev => ({ ...prev, images: undefined }));
+    return true;
+  };
+  
   const handleModelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setModelFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setModelFile(file);
+      validateModelFile(file);
     }
   };
   
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      setImageFiles(prev => [...prev, ...filesArray]);
+      setImageFiles(prev => {
+        const newFiles = [...prev, ...filesArray];
+        validateImageFiles(newFiles);
+        return newFiles;
+      });
     }
   };
   
@@ -49,8 +112,24 @@ const AdminUpload: React.FC = () => {
     setImageFiles(prev => {
       const newFiles = [...prev];
       newFiles.splice(index, 1);
+      validateImageFiles(newFiles);
       return newFiles;
     });
+  };
+  
+  const simulateProgress = () => {
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 10;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+      }
+      setUploadProgress(progress);
+    }, 300);
+    
+    return () => clearInterval(interval);
   };
   
   const handleUploadModel = async () => {
@@ -59,16 +138,29 @@ const AdminUpload: React.FC = () => {
       return;
     }
     
-    if (!modelFile.name.toLowerCase().endsWith('.glb')) {
-      toast.error('Please select a GLB file');
+    if (!validateModelFile(modelFile)) {
+      toast.error(validationErrors.model || 'Invalid model file');
       return;
     }
     
     try {
       setUploadingModel(true);
+      setUploadProgress(0);
+      
+      // Start progress simulation
+      const clearProgressInterval = simulateProgress();
+      
       await uploadHerbModel(herb.id, modelFile);
+      
+      // Ensure progress reaches 100%
+      setUploadProgress(100);
+      clearProgressInterval();
+      
       toast.success('3D model uploaded successfully');
       setModelFile(null);
+      
+      // Reset progress after a delay
+      setTimeout(() => setUploadProgress(0), 1000);
     } catch (error) {
       toast.error('Failed to upload 3D model');
       console.error('Error uploading model:', error);
@@ -83,27 +175,41 @@ const AdminUpload: React.FC = () => {
       return;
     }
     
-    // Check if all files are images
-    const areAllImages = imageFiles.every(file => 
-      file.type.startsWith('image/')
-    );
-    
-    if (!areAllImages) {
-      toast.error('Please select only image files');
+    if (!validateImageFiles(imageFiles)) {
+      toast.error(validationErrors.images || 'Invalid image files');
       return;
     }
     
     try {
       setUploadingImages(true);
+      setUploadProgress(0);
+      
+      // Start progress simulation
+      const clearProgressInterval = simulateProgress();
+      
       await uploadHerbImages(herb.id, imageFiles);
+      
+      // Ensure progress reaches 100%
+      setUploadProgress(100);
+      clearProgressInterval();
+      
       toast.success('Images uploaded successfully');
       setImageFiles([]);
+      
+      // Reset progress after a delay
+      setTimeout(() => setUploadProgress(0), 1000);
     } catch (error) {
       toast.error('Failed to upload images');
       console.error('Error uploading images:', error);
     } finally {
       setUploadingImages(false);
     }
+  };
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
   
   return (
@@ -117,7 +223,7 @@ const AdminUpload: React.FC = () => {
           Upload Files for {herb.name}
         </h1>
         <p className="text-gray-600 mt-2">
-          Upload 3D models and images for this herb.
+          Upload 3D models (GLB) and images (JPG, JPEG, PNG) for this herb.
         </p>
       </div>
       
@@ -126,7 +232,7 @@ const AdminUpload: React.FC = () => {
         <div className="p-6 bg-white rounded-lg border">
           <h2 className="text-xl font-semibold mb-4">Upload 3D Model</h2>
           <p className="text-gray-600 mb-4">
-            Upload a GLB format 3D model of the herb. This will be used in the virtual garden.
+            Upload a GLB format 3D model of the herb (max size: {MAX_MODEL_SIZE / (1024 * 1024)}MB). This will be used in the virtual garden.
           </p>
           
           <div className="space-y-4">
@@ -139,8 +245,14 @@ const AdminUpload: React.FC = () => {
                   accept=".glb"
                   onChange={handleModelChange}
                   className="flex-1"
+                  disabled={uploadingModel}
                 />
               </div>
+              {validationErrors.model && (
+                <p className="text-sm text-red-500 flex items-center mt-1">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> {validationErrors.model}
+                </p>
+              )}
             </div>
             
             {modelFile && (
@@ -149,7 +261,7 @@ const AdminUpload: React.FC = () => {
                   <Leaf className="h-5 w-5 text-herb-primary" />
                   <span className="font-medium">{modelFile.name}</span>
                   <span className="text-sm text-gray-500">
-                    ({(modelFile.size / (1024 * 1024)).toFixed(2)} MB)
+                    ({formatFileSize(modelFile.size)})
                   </span>
                 </div>
                 <Button
@@ -157,16 +269,27 @@ const AdminUpload: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setModelFile(null)}
+                  disabled={uploadingModel}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             )}
             
+            {uploadingModel && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{Math.round(uploadProgress)}%</span>
+                </div>
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            )}
+            
             <div className="pt-2">
               <Button 
                 onClick={handleUploadModel}
-                disabled={!modelFile || uploadingModel}
+                disabled={!modelFile || uploadingModel || !!validationErrors.model}
                 className="w-full"
               >
                 {uploadingModel ? (
@@ -182,6 +305,15 @@ const AdminUpload: React.FC = () => {
                 )}
               </Button>
             </div>
+            
+            {herb.model3dUrl && (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-green-800 flex items-center">
+                  <Check className="h-4 w-4 mr-2 text-green-600" />
+                  This herb already has a 3D model. Uploading a new one will replace it.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         </div>
         
@@ -189,7 +321,7 @@ const AdminUpload: React.FC = () => {
         <div className="p-6 bg-white rounded-lg border">
           <h2 className="text-xl font-semibold mb-4">Upload Images</h2>
           <p className="text-gray-600 mb-4">
-            Upload high-quality images of the herb. These will be displayed in the herb details page.
+            Upload high-quality images (JPG, JPEG, PNG) of the herb (max size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB per image). These will be displayed in the herb details page.
           </p>
           
           <div className="space-y-4">
@@ -199,12 +331,18 @@ const AdminUpload: React.FC = () => {
                 <Input
                   id="images"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png"
                   multiple
                   onChange={handleImagesChange}
                   className="flex-1"
+                  disabled={uploadingImages}
                 />
               </div>
+              {validationErrors.images && (
+                <p className="text-sm text-red-500 flex items-center mt-1">
+                  <AlertTriangle className="h-3 w-3 mr-1" /> {validationErrors.images}
+                </p>
+              )}
             </div>
             
             {imageFiles.length > 0 && (
@@ -219,6 +357,9 @@ const AdminUpload: React.FC = () => {
                       <div className="flex items-center space-x-2 truncate">
                         <Image className="h-5 w-5 text-herb-primary shrink-0" />
                         <span className="font-medium truncate">{file.name}</span>
+                        <span className="text-xs text-gray-500 shrink-0">
+                          ({formatFileSize(file.size)})
+                        </span>
                       </div>
                       <Button
                         type="button"
@@ -226,6 +367,7 @@ const AdminUpload: React.FC = () => {
                         size="icon"
                         onClick={() => removeImage(index)}
                         className="shrink-0"
+                        disabled={uploadingImages}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -235,10 +377,20 @@ const AdminUpload: React.FC = () => {
               </div>
             )}
             
+            {uploadingImages && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{Math.round(uploadProgress)}%</span>
+                </div>
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            )}
+            
             <div className="pt-2">
               <Button 
                 onClick={handleUploadImages}
-                disabled={imageFiles.length === 0 || uploadingImages}
+                disabled={imageFiles.length === 0 || uploadingImages || !!validationErrors.images}
                 className="w-full"
               >
                 {uploadingImages ? (
@@ -278,5 +430,21 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => 
     />
   );
 };
+
+// Check icon component
+const Check = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
 
 export default AdminUpload;

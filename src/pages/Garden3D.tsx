@@ -22,23 +22,23 @@ const Plant = ({ position, color, scale = 1 }: { position: [number, number, numb
       {/* Stem */}
       <mesh position={[0, 0.5, 0]}>
         <cylinderGeometry args={[0.05, 0.05, 1, 8]} />
-        <meshStandardMaterial color="#4a7c59" />
+        <meshStandardMaterial emissive="#4a7c59" />
       </mesh>
       
       {/* Leaves */}
       <mesh position={[0.2, 0.8, 0]} rotation={[0, 0, Math.PI / 6]}>
         <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial emissive={color} />
       </mesh>
       
       <mesh position={[-0.2, 0.7, 0]} rotation={[0, 0, -Math.PI / 6]}>
         <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial emissive={color} />
       </mesh>
       
       <mesh position={[0, 1, 0]}>
         <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial emissive={color} />
       </mesh>
     </group>
   );
@@ -49,7 +49,7 @@ const Ground = () => {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
       <planeGeometry args={[20, 20]} />
-      <meshStandardMaterial color="#8cb369" />
+      <meshStandardMaterial emissive="#8cb369" />
     </mesh>
   );
 };

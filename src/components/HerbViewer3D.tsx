@@ -15,10 +15,10 @@ const SimpleLeaf = () => {
   return (
     <mesh>
       <sphereGeometry args={[0.5, 16, 16]} />
-      <meshStandardMaterial color="#4a7c59" />
+      <meshStandardMaterial emissive="#4a7c59" />
       <mesh position={[0, 0.7, 0]}>
         <cylinderGeometry args={[0.05, 0.05, 1.5, 8]} />
-        <meshStandardMaterial color="#8cb369" />
+        <meshStandardMaterial emissive="#8cb369" />
       </mesh>
     </mesh>
   );

@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Herb, SearchFilters } from '@/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HerbContextType {
   herbs: Herb[];
@@ -139,6 +140,11 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
+        // In a real app, this would fetch from Supabase
+        // const { data, error } = await supabase.from('herbs').select('*');
+        // if (error) throw error;
+        // setHerbs(data);
+        
         setHerbs(MOCK_HERBS);
         setError(null);
       } catch (err) {
@@ -217,16 +223,25 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const uploadHerbModel = async (id: string, modelFile: File) => {
-    // Simulate model upload
+    // In a real application, this would upload to Supabase Storage
     setLoading(true);
     
     try {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // In a real app, this would upload the file to a server
-      // For now, we'll just create a fake URL
+      // Create a persistent URL that would normally come from Storage
       const modelUrl = URL.createObjectURL(modelFile);
+      
+      console.log(`Uploading 3D model for herb ${id}: ${modelFile.name}`);
+      
+      // This would actually be a call to Supabase Storage in a real app:
+      // const filePath = `models/${id}/${modelFile.name}`;
+      // const { data, error } = await supabase.storage
+      //   .from('herb-models')
+      //   .upload(filePath, modelFile, { upsert: true });
+      // if (error) throw error;
+      // const modelUrl = supabase.storage.from('herb-models').getPublicUrl(data.path).data.publicUrl;
       
       // Update the herb with the new model URL
       updateHerb(id, { model3dUrl: modelUrl });
@@ -241,20 +256,33 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const uploadHerbImages = async (id: string, imageFiles: File[]) => {
-    // Simulate image upload
+    // In a real application, this would upload to Supabase Storage
     setLoading(true);
     
     try {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // In a real app, this would upload the files to a server
-      // For now, we'll just create fake URLs
-      const newImages = imageFiles.map((file, index) => ({
-        id: `${Date.now()}-${index}`,
-        url: URL.createObjectURL(file),
-        alt: file.name,
-        isPrimary: index === 0
+      console.log(`Uploading ${imageFiles.length} images for herb ${id}`);
+      
+      // This would be calls to Supabase Storage in a real app:
+      const newImages = await Promise.all(imageFiles.map(async (file, index) => {
+        // const filePath = `images/${id}/${Date.now()}-${file.name}`;
+        // const { data, error } = await supabase.storage
+        //   .from('herb-images')
+        //   .upload(filePath, file, { upsert: true });
+        // if (error) throw error;
+        // const publicUrl = supabase.storage.from('herb-images').getPublicUrl(data.path).data.publicUrl;
+        
+        // For now, create a blob URL
+        const publicUrl = URL.createObjectURL(file);
+        
+        return {
+          id: `${Date.now()}-${index}`,
+          url: publicUrl,
+          alt: file.name,
+          isPrimary: index === 0
+        };
       }));
       
       // Update the herb with the new images

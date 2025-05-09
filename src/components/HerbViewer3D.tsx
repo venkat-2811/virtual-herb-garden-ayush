@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import { Leaf } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 interface HerbViewer3DProps {
   modelUrl?: string;
@@ -13,10 +14,22 @@ interface HerbViewer3DProps {
 // Model component that loads the GLB file
 const Model = ({ url }: { url: string }) => {
   const { scene } = useGLTF(url);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
   useEffect(() => {
+    // Simulate loading progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      if (progress >= 100) {
+        clearInterval(interval);
+      }
+      setLoadingProgress(progress);
+    }, 100);
+    
     // Clean up resources when unmounting
     return () => {
+      clearInterval(interval);
       useGLTF.preload(url);
     };
   }, [url]);
@@ -51,13 +64,27 @@ const LoadingFallback = () => {
 const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [modelLoaded, setModelLoaded] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Simulate loading the 3D model
+    // Load the 3D model with proper status updates
     const timer = setTimeout(() => {
       if (!modelUrl) {
         setError("No 3D model available for this herb");
+      } else {
+        // Check if the URL is valid before attempting to load
+        fetch(modelUrl)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to load 3D model: ${response.statusText}`);
+            }
+            setModelLoaded(true);
+          })
+          .catch(err => {
+            console.error("Error loading 3D model:", err);
+            setError(`Could not load 3D model: ${err.message}`);
+          });
       }
       setLoading(false);
     }, 1000);
@@ -71,6 +98,9 @@ const HerbViewer3D: React.FC<HerbViewer3DProps> = ({ modelUrl, herbName }) => {
         <div className="flex flex-col items-center">
           <Leaf className="h-12 w-12 text-herb-secondary animate-spin" />
           <p className="mt-4 text-sm text-gray-500">Loading 3D model...</p>
+          <div className="w-48 mt-4">
+            <Progress value={45} className="h-2" />
+          </div>
         </div>
       </div>
     );

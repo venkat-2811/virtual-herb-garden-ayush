@@ -22,10 +22,12 @@ import Explore from './pages/Explore';
 import HerbDetails from './pages/HerbDetails';
 import ChatPage from './pages/ChatPage';
 import Garden3D from './pages/Garden3D';
+import UserProfile from './pages/UserProfile';
 import Profile from './pages/Profile';
 import AdminHerbsList from './pages/admin/AdminHerbsList';
 import AdminHerbForm from './pages/admin/AdminHerbForm';
 import AdminUpload from './pages/admin/AdminUpload';
+import AdminUsers from './pages/admin/AdminUsers';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -78,7 +80,7 @@ const App = () => (
                   
                   <Route path="/profile" element={
                     <ProtectedRoute>
-                      <Profile />
+                      <UserProfile />
                     </ProtectedRoute>
                   } />
                   
@@ -110,6 +112,12 @@ const App = () => (
                   <Route path="/admin/herbs/:id/upload" element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminUpload />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/admin/users" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminUsers />
                     </ProtectedRoute>
                   } />
                   

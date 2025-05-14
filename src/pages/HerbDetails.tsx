@@ -7,6 +7,8 @@ import HerbViewer3D from '@/components/HerbViewer3D';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
@@ -22,6 +24,7 @@ import {
   Edit, 
   MapPin, 
   Bookmark, 
+  BookmarkCheck, 
   ClipboardList, 
   FlaskConical,
   Upload
@@ -30,7 +33,7 @@ import {
 const HerbDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getHerbById, loading } = useHerbs();
-  const { isAdmin } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
   const [herb, setHerb] = useState(() => {
@@ -39,6 +42,8 @@ const HerbDetails: React.FC = () => {
   });
   
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isInCollection, setIsInCollection] = useState(false);
+  const [checkingCollection, setCheckingCollection] = useState(false);
   
   useEffect(() => {
     if (!herb && id && !loading) {
@@ -46,6 +51,74 @@ const HerbDetails: React.FC = () => {
       navigate('/explore', { replace: true });
     }
   }, [herb, id, loading, navigate]);
+  
+  // Check if herb is in user's collection
+  useEffect(() => {
+    const checkCollection = async () => {
+      if (!currentUser || !id) return;
+      
+      try {
+        setCheckingCollection(true);
+        const { data, error } = await supabase
+          .from('user_collections')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .eq('herb_id', id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        setIsInCollection(!!data);
+      } catch (error) {
+        console.error('Error checking collection:', error);
+      } finally {
+        setCheckingCollection(false);
+      }
+    };
+    
+    if (isAuthenticated) {
+      checkCollection();
+    }
+  }, [currentUser, id, isAuthenticated]);
+  
+  const toggleCollection = async () => {
+    if (!currentUser || !id) {
+      toast.error('Please log in to add herbs to your collection');
+      return;
+    }
+    
+    try {
+      if (isInCollection) {
+        // Remove from collection
+        const { error } = await supabase
+          .from('user_collections')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('herb_id', id);
+        
+        if (error) throw error;
+        
+        setIsInCollection(false);
+        toast.success('Removed from your collection');
+      } else {
+        // Add to collection
+        const { error } = await supabase
+          .from('user_collections')
+          .insert({
+            user_id: currentUser.id,
+            herb_id: id
+          });
+        
+        if (error) throw error;
+        
+        setIsInCollection(true);
+        toast.success('Added to your collection');
+      }
+    } catch (error) {
+      console.error('Error updating collection:', error);
+      toast.error('Failed to update your collection');
+    }
+  };
   
   if (loading) {
     return (
@@ -89,20 +162,40 @@ const HerbDetails: React.FC = () => {
           <p className="text-lg italic text-muted-foreground">{herb.scientificName}</p>
         </div>
         
-        {isAdmin && (
-          <div className="flex gap-3 mt-4 md:mt-0">
-            <Button asChild variant="outline">
-              <Link to={`/admin/herbs/${herb.id}/upload`}>
-                <Upload className="mr-2 h-4 w-4" /> Upload Files
-              </Link>
+        <div className="flex gap-3 mt-4 md:mt-0">
+          {isAuthenticated && (
+            <Button
+              variant={isInCollection ? "default" : "outline"}
+              onClick={toggleCollection}
+              disabled={checkingCollection}
+            >
+              {isInCollection ? (
+                <>
+                  <BookmarkCheck className="mr-2 h-4 w-4" /> In Collection
+                </>
+              ) : (
+                <>
+                  <Bookmark className="mr-2 h-4 w-4" /> Add to Collection
+                </>
+              )}
             </Button>
-            <Button asChild>
-              <Link to={`/admin/herbs/${herb.id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" /> Edit Herb
-              </Link>
-            </Button>
-          </div>
-        )}
+          )}
+          
+          {isAuthenticated && isAdmin && (
+            <>
+              <Button asChild variant="outline">
+                <Link to={`/admin/herbs/${herb.id}/upload`}>
+                  <Upload className="mr-2 h-4 w-4" /> Upload Files
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to={`/admin/herbs/${herb.id}/edit`}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit Herb
+                </Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

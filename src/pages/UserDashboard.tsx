@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import HerbCard from '@/components/HerbCard';
-import { Leaf, Search, Book, ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Leaf, Search, Book, ArrowRight, Bookmark } from 'lucide-react';
 
 const UserDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const { herbs, loading } = useHerbs();
+  const [collectionCount, setCollectionCount] = useState(0);
   
   // Get featured herbs (for now, just random selection)
   const featuredHerbs = herbs.slice(0, 3);
@@ -25,6 +27,28 @@ const UserDashboard: React.FC = () => {
   // Stats
   const totalHerbs = herbs.length;
   const regionsCount = new Set(herbs.flatMap(herb => herb.region)).size;
+  
+  // Get user's collection count
+  useEffect(() => {
+    const fetchCollectionCount = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const { count, error } = await supabase
+          .from('user_collections')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
+        
+        setCollectionCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching collection count:', error);
+      }
+    };
+    
+    fetchCollectionCount();
+  }, [currentUser]);
   
   return (
     <div className="container py-8">
@@ -34,7 +58,7 @@ const UserDashboard: React.FC = () => {
       </p>
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-2xl font-bold">Herbal Library</CardTitle>
@@ -66,6 +90,24 @@ const UserDashboard: React.FC = () => {
             <Button variant="outline" className="w-full" asChild>
               <Link to="/explore">
                 Filter by Region <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-2xl font-bold">Your Collection</CardTitle>
+            <Bookmark className="h-6 w-6 text-herb-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-5xl font-bold text-herb-primary">{collectionCount}</div>
+            <p className="text-sm text-gray-500 mt-2">Herbs saved to your personal collection</p>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <Link to="/profile?tab=collection">
+                View Collection <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </CardFooter>
@@ -134,8 +176,8 @@ const UserDashboard: React.FC = () => {
           </Button>
           <Button className="flex items-center justify-center gap-2 h-16" asChild>
             <Link to="/profile">
-              <Leaf className="h-5 w-5" />
-              Your Profile
+              <Bookmark className="h-5 w-5" />
+              Your Collection
             </Link>
           </Button>
         </div>

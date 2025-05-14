@@ -18,16 +18,18 @@ interface HerbCardProps {
 }
 
 const HerbCard: React.FC<HerbCardProps> = ({ herb }) => {
-  // Find the primary image or use the first one
-  const primaryImage = herb.images?.find(img => img.isPrimary) || herb.images?.[0];
+  // Always find the primary image first
+  const primaryImage = herb.images?.find(img => img.isPrimary);
+  // If no primary image is set, use the first one
+  const displayImage = primaryImage || herb.images?.[0];
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className="h-48 overflow-hidden relative">
-        {primaryImage ? (
+        {displayImage ? (
           <img 
-            src={primaryImage.url || '/placeholder.svg'} 
-            alt={primaryImage.alt || herb.name}
+            src={displayImage.url || '/placeholder.svg'} 
+            alt={displayImage.alt || herb.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               const target = e.target as HTMLImageElement;

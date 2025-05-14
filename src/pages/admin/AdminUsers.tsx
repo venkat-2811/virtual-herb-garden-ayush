@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Ban, Check, X } from 'lucide-react';
 
+// Define a more appropriate interface for Supabase users
 interface SupabaseUser {
   id: string;
   email: string;
@@ -24,6 +25,7 @@ interface SupabaseUser {
   last_sign_in_at: string | null;
   user_metadata: any;
   app_metadata: any;
+  banned?: boolean; // Add the banned property as optional
 }
 
 const AdminUsers: React.FC = () => {
@@ -40,7 +42,13 @@ const AdminUsers: React.FC = () => {
         
         if (error) throw error;
         
-        setUsers(data.users);
+        // Map the data to include the banned status
+        const formattedUsers = data.users.map(user => ({
+          ...user,
+          banned: user.banned || false // Ensure banned property exists
+        }));
+        
+        setUsers(formattedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast.error('Failed to load users');

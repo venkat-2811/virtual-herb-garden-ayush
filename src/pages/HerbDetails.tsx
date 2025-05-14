@@ -33,7 +33,7 @@ import {
 const HerbDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getHerbById, loading } = useHerbs();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   
   const [herb, setHerb] = useState(() => {

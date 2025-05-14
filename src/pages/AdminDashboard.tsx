@@ -1,231 +1,237 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowRight, PlusCircle, ListChecks, Upload, Leaf, Users, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHerbs } from '@/contexts/HerbContext';
-import { Link } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Leaf,
-  Upload,
-  Users,
-  Settings,
-  Plus,
-  ArrowRight,
-  BarChart,
-} from 'lucide-react';
-
-// Simple chart component
-const SimpleBarChart = () => {
-  return (
-    <div className="w-full h-64 flex items-end gap-2 pt-8">
-      {[65, 40, 85, 30, 55, 60, 75].map((value, index) => (
-        <div key={index} className="flex-1 flex flex-col items-center">
-          <div 
-            className="w-full bg-herb-primary hover:bg-herb-secondary transition-colors rounded-t"
-            style={{ height: `${value}%` }}
-          ></div>
-          <div className="text-xs mt-2 text-gray-600">Day {index + 1}</div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const AdminDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const { herbs, loading } = useHerbs();
+  const { herbs } = useHerbs();
   
-  // Stats
-  const totalHerbs = herbs.length;
-  const herbsWith3D = herbs.filter(herb => herb.model3dUrl).length;
-  const regionsCount = new Set(herbs.flatMap(herb => herb.region)).size;
+  // For demonstration purposes
+  const totalUsers = 42;
+  const newUsersThisMonth = 7;
+  const questionsAnswered = 152;
   
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-serif font-bold mb-2">Admin Dashboard</h1>
+      <h1 className="text-3xl font-serif font-bold mb-2">
+        Admin Dashboard
+      </h1>
       <p className="text-gray-600 mb-8">
-        Manage the AYUSH Virtual Herbal Garden and monitor system activity.
+        Welcome back, {currentUser?.name || 'Admin'}. Here's an overview of your AYUSH platform.
       </p>
       
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Herbs</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Herbs
+            </CardTitle>
+            <Leaf className="h-4 w-4 text-herb-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalHerbs}</div>
-            <p className="text-xs text-muted-foreground mt-1">+3 from last week</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Herbs with 3D Models</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{herbsWith3D}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((herbsWith3D / totalHerbs) * 100).toFixed(1)}% coverage
+            <div className="text-2xl font-bold">{herbs.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Cataloged medicinal herbs
             </p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Registered Users</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Users
+            </CardTitle>
+            <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground mt-1">+5 from last week</p>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              +{newUsersThisMonth} this month
+            </p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Chat Queries</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              AI Interactions
+            </CardTitle>
+            <MessageSquare className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground mt-1">+43 from last week</p>
+            <div className="text-2xl font-bold">{questionsAnswered}</div>
+            <p className="text-xs text-muted-foreground">
+              Questions answered by the AI
+            </p>
           </CardContent>
         </Card>
       </div>
       
-      {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Activity</CardTitle>
-              <CardDescription>User interactions in the past 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SimpleBarChart />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Herbs</CardTitle>
-                <CardDescription>Latest additions to the database</CardDescription>
-              </div>
-              <Button asChild>
-                <Link to="/admin/herbs/add">
-                  <Plus className="mr-2 h-4 w-4" /> Add Herb
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {herbs.slice(0, 5).map(herb => (
-                  <div key={herb.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full overflow-hidden mr-3">
-                        {herb.images.length > 0 ? (
-                          <img 
-                            src={herb.images[0].url} 
-                            alt={herb.name} 
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-herb-primary/20 flex items-center justify-center">
-                            <Leaf className="h-5 w-5 text-herb-primary" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium">{herb.name}</p>
-                        <p className="text-xs text-gray-500">{herb.scientificName}</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/admin/herbs/${herb.id}/edit`}>Edit</Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" asChild>
-                <Link to="/admin/herbs">
-                  View All Herbs <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+      <Tabs defaultValue="herbs" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="herbs">Herb Management</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
+        </TabsList>
         
-        {/* Right Column */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full justify-start" asChild>
-                <Link to="/admin/herbs/add">
-                  <Plus className="mr-2 h-4 w-4" /> Add New Herb
-                </Link>
-              </Button>
-              <Button className="w-full justify-start" asChild>
-                <Link to="/admin/uploads">
-                  <Upload className="mr-2 h-4 w-4" /> Upload 3D Models
-                </Link>
-              </Button>
-              <Button className="w-full justify-start" asChild>
-                <Link to="/admin/users">
-                  <Users className="mr-2 h-4 w-4" /> Manage Users
-                </Link>
-              </Button>
-              <Button className="w-full justify-start" asChild>
-                <Link to="/admin/settings">
-                  <Settings className="mr-2 h-4 w-4" /> System Settings
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-sm">AI Chatbot:</span>
-                  <span className="text-sm font-medium text-green-600">Online</span>
+        <TabsContent value="herbs">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Herbs</CardTitle>
+                <CardDescription>
+                  View and modify the herb catalog
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Edit details, update scientific information, or remove herbs from the database.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button asChild>
+                  <Link to="/admin/herbs">
+                    Browse Herbs <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Add New Herb</CardTitle>
+                <CardDescription>
+                  Create a new herb entry
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Add new medicinal herbs along with their properties, uses, and regional information.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button asChild>
+                  <Link to="/admin/herbs/add">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Create Herb
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Herb Verification</CardTitle>
+                <CardDescription>
+                  Review and approve herb submissions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Verify scientific accuracy and approve submissions from community contributors.
+                </p>
+                <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-md">
+                  <p className="flex items-center">
+                    <ListChecks className="h-4 w-4 mr-2" />
+                    No pending submissions
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Database:</span>
-                  <span className="text-sm font-medium text-green-600">Connected</span>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" disabled>
+                  Review Submissions
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  Manage user accounts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  View all users, change roles and permissions, or deactivate accounts if needed.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button asChild>
+                  <Link to="/admin/users">
+                    <Users className="mr-2 h-4 w-4" /> Manage Users
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>User Activity</CardTitle>
+                <CardDescription>
+                  Track user engagement
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Monitor user activity, popular herbs, search patterns, and AI interactions.
+                </p>
+                <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-md">
+                  <p className="flex items-center">
+                    <ListChecks className="h-4 w-4 mr-2" />
+                    Activity reporting in development
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Storage:</span>
-                  <span className="text-sm font-medium text-green-600">65% Free</span>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" disabled>
+                  View Activity Reports
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Feedback & Support</CardTitle>
+                <CardDescription>
+                  Manage user feedback
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Review user feedback, support requests, and feature suggestions.
+                </p>
+                <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-md">
+                  <p className="flex items-center">
+                    <ListChecks className="h-4 w-4 mr-2" />
+                    No pending support requests
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Last Backup:</span>
-                  <span className="text-sm font-medium">
-                    {new Date().toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" disabled>
+                  View Feedback
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

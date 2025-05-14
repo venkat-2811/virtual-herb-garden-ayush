@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Leaf } from 'lucide-react';
+import { Leaf, Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Register: React.FC = () => {
   const { register, isAuthenticated, loading } = useAuth();
@@ -14,6 +16,8 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
   
   // Redirect if already logged in
   if (isAuthenticated) {
@@ -36,11 +40,42 @@ const Register: React.FC = () => {
     }
     
     try {
+      // For demo purposes, we'll use the Auth Context's register function
+      // but also show how to use Supabase directly
+      
+      // Option 1: Using the Auth Context
       await register(name, email, password);
+      
+      // Option 2: Using Supabase directly
+      // This is commented out since we're using the Auth Context above
+      /*
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
+      
+      if (signUpError) throw signUpError;
+      
+      if (data && data.user) {
+        toast.success('Account created successfully! Please check your email to confirm your account.');
+        navigate('/login');
+      }
+      */
+      
       // Redirect handled by condition above after successful registration
     } catch (err) {
       setError((err as Error).message);
+      console.error('Registration error:', err);
     }
+  };
+  
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
   
   return (
@@ -95,26 +130,37 @@ const Register: React.FC = () => {
                 className="rounded-t-none rounded-b-none"
               />
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>
               <Input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-t-none rounded-b-none"
+                className="rounded-t-none rounded-b-none pr-10"
               />
+              <button 
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                onClick={toggleShowPassword}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
             </div>
             <div>
               <label htmlFor="confirm-password" className="sr-only">Confirm password</label>
               <Input
                 id="confirm-password"
                 name="confirmPassword"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 placeholder="Confirm password"
@@ -140,6 +186,19 @@ const Register: React.FC = () => {
                 'Create account'
               )}
             </Button>
+          </div>
+          
+          <div className="text-sm text-center">
+            <p className="text-gray-500">
+              By registering, you agree to our{' '}
+              <Link to="/terms" className="font-medium text-herb-primary hover:text-herb-secondary">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="font-medium text-herb-primary hover:text-herb-secondary">
+                Privacy Policy
+              </Link>
+            </p>
           </div>
         </form>
       </div>

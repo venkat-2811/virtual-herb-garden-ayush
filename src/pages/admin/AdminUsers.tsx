@@ -9,13 +9,12 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Ban, Check, X } from 'lucide-react';
+import { Users, Ban, Check } from 'lucide-react';
 
 // Define a more appropriate interface for Supabase users
 interface SupabaseUser {

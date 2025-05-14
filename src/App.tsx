@@ -26,7 +26,6 @@ import Profile from './pages/Profile';
 import AdminHerbsList from './pages/admin/AdminHerbsList';
 import AdminHerbForm from './pages/admin/AdminHerbForm';
 import AdminUpload from './pages/admin/AdminUpload';
-import AdminUsers from './pages/admin/AdminUsers';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -111,12 +110,6 @@ const App = () => (
                   <Route path="/admin/herbs/:id/upload" element={
                     <ProtectedRoute requiredRole="admin">
                       <AdminUpload />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/admin/users" element={
-                    <ProtectedRoute requiredRole="admin">
-                      <AdminUsers />
                     </ProtectedRoute>
                   } />
                   

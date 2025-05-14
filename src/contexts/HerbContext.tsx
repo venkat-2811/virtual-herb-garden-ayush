@@ -132,44 +132,19 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load herbs on component mount
   useEffect(() => {
+    // Simulate API call to load herbs
     const loadHerbs = async () => {
       try {
         setLoading(true);
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Get herbs either from mock data or from localStorage if available
-        let loadedHerbs = [...MOCK_HERBS];
+        // In a real app, this would fetch from Supabase
+        // const { data, error } = await supabase.from('herbs').select('*');
+        // if (error) throw error;
+        // setHerbs(data);
         
-        // Try to load stored models and images data
-        try {
-          // Load stored models
-          const storedModels = JSON.parse(localStorage.getItem('herbModels') || '{}');
-          
-          // Load stored images
-          const storedImages = JSON.parse(localStorage.getItem('herbImages') || '{}');
-          
-          // Apply stored data to herbs
-          loadedHerbs = loadedHerbs.map(herb => {
-            const updates: Partial<Herb> = {};
-            
-            if (storedModels[herb.id]) {
-              updates.model3dUrl = storedModels[herb.id];
-            }
-            
-            if (storedImages[herb.id]) {
-              updates.images = storedImages[herb.id];
-            }
-            
-            return Object.keys(updates).length > 0 
-              ? { ...herb, ...updates } 
-              : herb;
-          });
-        } catch (error) {
-          console.error("Error loading stored herb data:", error);
-        }
-        
-        setHerbs(loadedHerbs);
+        setHerbs(MOCK_HERBS);
         setError(null);
       } catch (err) {
         setError('Failed to load herbs');
@@ -254,24 +229,27 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const timestamp = Date.now();
       const fileExt = modelFile.name.split('.').pop();
       const fileName = `${id}_${timestamp}.${fileExt}`;
-      const filePath = `${id}/${fileName}`;
+      const filePath = `models/${id}/${fileName}`;
       
-      // Upload to Supabase Storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('herb-models')
-        .upload(filePath, modelFile, { upsert: true });
+      // Store the file reference in a more permanent way
+      // In a real application with Supabase:
+      // const { error: uploadError } = await supabase.storage
+      //   .from('herb-models')
+      //   .upload(filePath, modelFile, { upsert: true });
       
-      if (uploadError) throw uploadError;
+      // if (uploadError) throw uploadError;
       
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('herb-models')
-        .getPublicUrl(filePath);
+      // const { data } = supabase.storage
+      //   .from('herb-models')
+      //   .getPublicUrl(filePath);
       
-      const modelUrl = urlData.publicUrl;
+      // const modelUrl = data.publicUrl;
+      
+      // For demo, we'll use a blob URL that will persist for this session
+      const modelUrl = URL.createObjectURL(modelFile);
       console.log(`Model uploaded: ${modelUrl}`);
       
-      // Store URL in localStorage as a backup
+      // Store this URL in localStorage to persist across page reloads
       const storedModels = JSON.parse(localStorage.getItem('herbModels') || '{}');
       storedModels[id] = modelUrl;
       localStorage.setItem('herbModels', JSON.stringify(storedModels));
@@ -305,21 +283,23 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const timestamp = Date.now();
         const fileExt = file.name.split('.').pop();
         const fileName = `${id}_${timestamp}_${index}.${fileExt}`;
-        const filePath = `${id}/${fileName}`;
+        const filePath = `images/${id}/${fileName}`;
         
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('herb-images')
-          .upload(filePath, file, { upsert: true });
+        // In a real application with Supabase:
+        // const { error: uploadError } = await supabase.storage
+        //   .from('herb-images')
+        //   .upload(filePath, file, { upsert: true });
         
-        if (uploadError) throw uploadError;
+        // if (uploadError) throw uploadError;
         
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from('herb-images')
-          .getPublicUrl(filePath);
+        // const { data } = supabase.storage
+        //   .from('herb-images')
+        //   .getPublicUrl(filePath);
         
-        const publicUrl = urlData.publicUrl;
+        // const publicUrl = data.publicUrl;
+        
+        // For demo, create a blob URL that will persist for this session
+        const publicUrl = URL.createObjectURL(file);
         console.log(`Image uploaded: ${publicUrl}`);
         
         return {
@@ -348,7 +328,7 @@ export const HerbProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedImages[0].isPrimary = true;
       }
       
-      // Store images in localStorage as a backup
+      // Store images in localStorage to persist across page reloads
       const storedImages = JSON.parse(localStorage.getItem('herbImages') || '{}');
       storedImages[id] = updatedImages;
       localStorage.setItem('herbImages', JSON.stringify(storedImages));
